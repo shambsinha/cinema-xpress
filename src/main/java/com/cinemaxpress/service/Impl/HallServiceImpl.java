@@ -1,6 +1,7 @@
 package com.cinemaxpress.service.Impl;
 
 import com.cinemaxpress.dto.HallCreateRequest;
+import com.cinemaxpress.dto.HallResponse;
 import com.cinemaxpress.entity.Hall;
 import com.cinemaxpress.entity.Seat;
 import com.cinemaxpress.entity.Theatre;
@@ -26,7 +27,7 @@ public class HallServiceImpl implements HallService {
 
     @Override
     @Transactional
-    public Hall createHallWithSeats(HallCreateRequest request) {
+    public HallResponse createHallWithSeats(HallCreateRequest request) {
 
         Theatre theatre = theatreRepository.findById(request.getTheatreId())
                 .orElseThrow(() -> new ResourceNotFoundException("Theatre not found"));
@@ -42,7 +43,14 @@ public class HallServiceImpl implements HallService {
         List<Seat> seats = generateSeatsForHall(savedHall, request.getCapacity());
         seatRepository.saveAll(seats);
 
-        return savedHall;
+        return HallResponse.builder()
+                .id(savedHall.getId())
+                .theatreId(theatre.getId())
+                .theatreName(theatre.getName())
+                .name(savedHall.getName())
+                .capacity(savedHall.getCapacity())
+                .status(savedHall.getStatus())
+                .build();
     }
 
     private List<Seat> generateSeatsForHall(Hall hall, int totalCapacity) {

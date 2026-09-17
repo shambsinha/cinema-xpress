@@ -1,56 +1,45 @@
 package com.cinemaxpress.controller;
 
-import com.cinemaxpress.entity.Theatre;
-import com.cinemaxpress.exception.ResourceNotFoundException;
-import com.cinemaxpress.repository.TheatreRepository;
+import com.cinemaxpress.dto.TheatreRequest;
+import com.cinemaxpress.dto.TheatreResponse;
+import com.cinemaxpress.service.TheatreService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/theatres")
 @RequiredArgsConstructor
 public class AdminTheatreController {
 
-    private final TheatreRepository theatreRepository;
+    private final TheatreService theatreService;
 
     @GetMapping
-    public ResponseEntity<List<Theatre>> getAllTheatres() {
-        return ResponseEntity.ok(theatreRepository.findAll());
+    public ResponseEntity<Page<TheatreResponse>> getAllTheatres(Pageable pageable) {
+        return ResponseEntity.ok(theatreService.getAllTheatres(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Theatre> getTheatreById(@PathVariable Long id) {
-        return theatreRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResourceNotFoundException("Theatre not found with id: " + id));
+    public ResponseEntity<TheatreResponse> getTheatreById(@PathVariable Long id) {
+        return ResponseEntity.ok(theatreService.getTheatreById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Theatre> createTheatre(@RequestBody Theatre theatre) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(theatreRepository.save(theatre));
+    public ResponseEntity<TheatreResponse> createTheatre(@RequestBody TheatreRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(theatreService.createTheatre(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Theatre> updateTheatre(@PathVariable Long id, @RequestBody Theatre theatreDetails) {
-        Theatre theatre = theatreRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Theatre not found with id: " + id));
-        theatre.setName(theatreDetails.getName());
-        theatre.setCity(theatreDetails.getCity());
-        theatre.setAddress(theatreDetails.getAddress());
-        theatre.setManager(theatreDetails.getManager());
-        return ResponseEntity.ok(theatreRepository.save(theatre));
+    public ResponseEntity<TheatreResponse> updateTheatre(@PathVariable Long id, @RequestBody TheatreRequest request) {
+        return ResponseEntity.ok(theatreService.updateTheatre(id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTheatre(@PathVariable Long id) {
-        if (!theatreRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Theatre not found with id: " + id);
-        }
-        theatreRepository.deleteById(id);
+        theatreService.deleteTheatre(id);
         return ResponseEntity.noContent().build();
     }
 }

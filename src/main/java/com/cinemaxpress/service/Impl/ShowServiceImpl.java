@@ -1,6 +1,8 @@
 package com.cinemaxpress.service.Impl;
 
 import com.cinemaxpress.dto.ShowCreateRequest;
+import com.cinemaxpress.dto.ShowResponse;
+import com.cinemaxpress.dto.ShowSeatResponse;
 import com.cinemaxpress.entity.Hall;
 import com.cinemaxpress.entity.Movie;
 import com.cinemaxpress.entity.Seat;
@@ -34,7 +36,7 @@ public class ShowServiceImpl implements ShowService {
 
     @Override
     @Transactional
-    public Show createShow(ShowCreateRequest request) {
+    public ShowResponse createShow(ShowCreateRequest request) {
 
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
@@ -84,6 +86,48 @@ public class ShowServiceImpl implements ShowService {
 
         showSeatRepository.saveAll(showSeats);
 
-        return savedShow;
+        return toShowResponse(savedShow);
+    }
+
+    @Override
+    public List<ShowResponse> getShowsForMovie(Long movieId) {
+        return showRepository.findByMovieId(movieId).stream().map(this::toShowResponse).toList();
+    }
+
+    @Override
+    public List<ShowSeatResponse> getShowSeats(Long showId) {
+        return showSeatRepository.findByShowId(showId).stream().map(this::toShowSeatResponse).toList();
+    }
+
+    private ShowResponse toShowResponse(Show show) {
+        return ShowResponse.builder()
+                .showId(show.getId())
+                .movieId(show.getMovie().getId())
+                .movieTitle(show.getMovie().getTitle())
+                .moviePosterUrl(show.getMovie().getPosterUrl())
+                .movieCertification(show.getMovie().getCertification())
+                .hallId(show.getHall().getId())
+                .hallName(show.getHall().getName())
+                .theatreName(show.getHall().getTheatre().getName())
+                .city(show.getHall().getTheatre().getCity().getName())
+                .language(show.getLanguage())
+                .startTime(show.getStartTime())
+                .endTime(show.getEndTime())
+                .basePrice(show.getBasePrice())
+                .availableSeats(show.getAvailableSeats())
+                .status(show.getStatus())
+                .build();
+    }
+
+    private ShowSeatResponse toShowSeatResponse(ShowSeat seat) {
+        return ShowSeatResponse.builder()
+                .id(seat.getId())
+                .showId(seat.getShow().getId())
+                .seatId(seat.getSeat().getId())
+                .rowLabel(seat.getSeat().getRowLabel())
+                .seatNumber(seat.getSeat().getSeatNumber())
+                .price(seat.getPrice())
+                .status(seat.getStatus().name())
+                .build();
     }
 }

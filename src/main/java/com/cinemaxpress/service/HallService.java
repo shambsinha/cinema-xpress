@@ -1,8 +1,8 @@
 package com.cinemaxpress.service;
 
 import com.cinemaxpress.dto.HallCreateRequest;
-import com.cinemaxpress.entity.Hall;
+import com.cinemaxpress.dto.HallResponse;
 
 public interface HallService {
-    Hall createHallWithSeats(HallCreateRequest request);
+    HallResponse createHallWithSeats(HallCreateRequest request);
 }

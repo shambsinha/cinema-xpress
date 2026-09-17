@@ -11,6 +11,8 @@ import com.cinemaxpress.exception.ResourceNotFoundException;
 import com.cinemaxpress.repository.*;
 import com.cinemaxpress.service.BookingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,9 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse bookTickets(BookingRequest request) {
 
-        User user = userRepository.findById(request.getUserId())
+        Long currentUserId = requireCurrentUserId();
+
+        User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Show show = showRepository.findByIdForUpdate(request.getShowId())
@@ -94,23 +98,44 @@ public class BookingServiceImpl implements BookingService {
         }
         bookingSeatRepository.saveAll(bookingSeats);
 
-        BookingResponse response = new BookingResponse();
-        response.setBookingReference(savedBooking.getBookingReference());
-        response.setMovieTitle(show.getMovie().getTitle());
-        response.setTheatreName(show.getHall().getTheatre().getName());
-        response.setHallName(show.getHall().getName());
-        response.setShowTime(show.getStartTime().toString());
-        response.setSeatLabels(seatLabels);
-        response.setTotalAmount(savedBooking.getTotalAmount());
-        response.setStatus(savedBooking.getStatus());
-
-        return response;
+        return toResponse(savedBooking, seatLabels);
     }
 
     @Override
-    public List<Booking> getUserBookingHistory() {
+    public Page<BookingResponse> getUserBookingHistory(Pageable pageable) {
+        Long currentUserId = requireCurrentUserId();
+        return bookingRepository.findByUserId(currentUserId, pageable)
+                .map(booking -> toResponse(booking, seatLabelsFor(booking)));
+    }
+
+    private List<String> seatLabelsFor(Booking booking) {
+        return bookingSeatRepository.findByBookingId(booking.getId()).stream()
+                .map(bookingSeat -> bookingSeat.getShowSeat().getSeat().getRowLabel()
+                        + bookingSeat.getShowSeat().getSeat().getSeatNumber())
+                .toList();
+    }
+
+    private BookingResponse toResponse(Booking booking, List<String> seatLabels) {
+        BookingResponse response = new BookingResponse();
+        response.setId(booking.getId());
+        response.setBookingReference(booking.getBookingReference());
+        response.setMovieTitle(booking.getShow().getMovie().getTitle());
+        response.setTheatreName(booking.getShow().getHall().getTheatre().getName());
+        response.setHallName(booking.getShow().getHall().getName());
+        response.setShowTime(booking.getShow().getStartTime().toString());
+        response.setSeatLabels(seatLabels);
+        response.setTotalAmount(booking.getTotalAmount());
+        response.setStatus(booking.getStatus());
+        response.setBookedAt(booking.getCreatedAt());
+        return response;
+    }
+
+    private Long requireCurrentUserId() {
         Long userId = SecurityConfig.getCurrentUserId();
-        return bookingRepository.findByUserId(userId);
+        if (userId == null) {
+            throw new BusinessException("Unable to resolve authenticated user.");
+        }
+        return userId;
     }
 
     private String generateBookingReference() {
